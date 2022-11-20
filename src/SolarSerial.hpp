@@ -57,10 +57,5 @@ private:
 		};
 	)
 
-#ifndef WINDOWS
 	int _fd = -1;
-	struct timespec _timeout = { 0, 100000000 };	// 100 ms
-#else
-	void* _handle = nullptr;
-#endif
 };
