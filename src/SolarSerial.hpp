@@ -6,24 +6,16 @@
 #include <stdexcept>
 #include "MPPTData.h"
 
-#ifndef WINDOWS
 #include <netinet/in.h>
-#endif
 
-#ifdef __GNUC__
 #define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
 
 
 class SolarSerial {
 public:
 	static constexpr const int MPPTCount = 4;
 
-	SolarSerial(const std::string& path, int baudrate = 115200);
+	SolarSerial(const std::string& path, int baudrate);
 	~SolarSerial() noexcept;
 
 	std::array<MPPTData, MPPTCount> ReadAll();
@@ -38,8 +30,7 @@ private:
 	std::vector<uint8_t> read() const;
 	void write(const uint8_t* cmd_buf, size_t sz) const;
 
-	static constexpr const uint8_t cmd_magic[] = {0x4f, 0xc7, 0xb2, 0x9a};
-	enum CommandID : uint8_t {
+	enum class CommandID : uint8_t {
 		READ_ALL = 0x01,
 		SET_MAX_WIPER = 0x02,		// Max wiper is next byte
 		SET_OUTPUT_DISABLED = 0x04,

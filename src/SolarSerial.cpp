@@ -5,14 +5,6 @@
 #include <thread>
 #include <cstring>
 
-#ifdef WINDOWS
-#define _WINSOCKAPI_
-#include <windows.h>
-#include <winsock2.h>
-#ifndef MINGW
-#pragma comment(lib, "Ws2_32.lib") // Without this, Ws2_32.lib is not included in static library.
-#endif
-#else
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
@@ -21,17 +13,10 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <string.h>
-#endif
 
-#ifndef WINDOWS
 #define GET_ERROR_STR std::string(strerror(errno))
 #define GET_ERROR errno
-#else
-#define GET_ERROR_STR std::string()
-#define GET_ERROR GetLastError()
-#endif
 
-#ifndef WINDOWS
 static int _define_from_baudrate(int baudrate) {
 	switch (baudrate) {
 	case 9600:
@@ -74,7 +59,6 @@ static int _define_from_baudrate(int baudrate) {
 		throw std::runtime_error("Unknown baudrate " + std::to_string(baudrate));
 	}
 }
-#endif
 
 
 SolarSerial::SolarSerial(const std::string& path, int baudrate) {
