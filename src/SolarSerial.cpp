@@ -113,11 +113,12 @@ SolarSerial::~SolarSerial() noexcept {
 std::array<MPPTData, SolarSerial::MPPTCount> SolarSerial::ReadAll() {
 	CommandHeader cmd;
 	cmd.command = CommandID::READ_ALL;
-	std::array<MPPTData, MPPTCount> res;
+	std::array<MPPTData, MPPTCount> res{};
 	for(int i = 0; i < MPPTCount; ++i) {
 		cmd.identity = i + 1;
 		write((uint8_t*)&cmd, sizeof(CommandHeader));
 		auto resp = read();
+		if(resp.size() != sizeof(MPPTData)) continue;
 		res[i] = *(MPPTData*)resp.data();
 	}
 	return res;
@@ -144,10 +145,10 @@ void SolarSerial::SetOutputEnabled(int mpptID, bool en) {
 std::vector<uint8_t> SolarSerial::read() const {
 	int read_len = 0;
 	uint8_t _readBuffer[1024];
-	
+
 	read_len = ::read(_fd, _readBuffer, sizeof(_readBuffer));
 
-	if (read_len <= 0) throw ReadTimeoutException();
+	if (read_len <= 0) return std::vector<uint8_t>();
 
 	auto ret = std::vector<uint8_t>(read_len);
 	std::memcpy(ret.data(), _readBuffer, read_len);

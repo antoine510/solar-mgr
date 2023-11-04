@@ -8,7 +8,7 @@ static constexpr const char* serial_device = "/dev/mppts";
 static constexpr const char* influxdb_org_name = "Microtonome";
 static constexpr const char* influxdb_bucket = "Solaire";
 
-using LogPeriod = std::chrono::duration<int64_t, std::ratio<30>>;
+using LogPeriod = std::chrono::duration<int64_t, std::ratio<60>>;
 
 int main(int argc, char** argv) {
 	using namespace std::chrono;
@@ -27,29 +27,21 @@ int main(int argc, char** argv) {
 
 			try {
 				auto data = solar.ReadAll();
+				influxdb_cpp::builder builder;
 
-				influxdb_cpp::builder()
-					.meas("MPPT1")
-					.field("voltage", data[0].millivolts / 1000.f, 2)
-					.field("current", data[0].milliamps / 1000.f, 2)
-					.field("watts", data[0].deciwatts / 10.f, 1)
-					.field("joules", data[0].joules)
-					.meas("MPPT2")
-					.field("voltage", data[1].millivolts / 1000.f, 2)
-					.field("current", data[1].milliamps / 1000.f, 2)
-					.field("watts", data[1].deciwatts / 10.f, 1)
-					.field("joules", data[1].joules)
-					.meas("MPPT3")
-					.field("voltage", data[2].millivolts / 1000.f, 2)
-					.field("current", data[2].milliamps / 1000.f, 2)
-					.field("watts", data[2].deciwatts / 10.f, 1)
-					.field("joules", data[2].joules)
-					.meas("MPPT4")
-					.field("voltage", data[3].millivolts / 1000.f, 2)
-					.field("current", data[3].milliamps / 1000.f, 2)
-					.field("watts", data[3].deciwatts / 10.f, 1)
-					.field("joules", data[3].joules)
-					.post_http(serverInfo);
+				int i = 0;
+				bool hasData = false;
+				for(const auto& mppt : data) {
+					++i;
+					if(mppt.millivolts == 0) continue;
+					builder.meas("MPPT" + std::to_string(i))
+						.field("voltage", mppt.millivolts / 1000.f, 2)
+						.field("current", mppt.milliamps / 1000.f, 2)
+						.field("watts", mppt.deciwatts / 10.f, 1)
+						.field("joules", mppt.joules);
+					hasData = true;
+				}
+				if(hasData) reinterpret_cast<influxdb_cpp::detail::ts_caller&>(builder).post_http(serverInfo);
 			} catch(const std::exception& e) {
 				std::cerr << e.what() << std::endl;
 			}
