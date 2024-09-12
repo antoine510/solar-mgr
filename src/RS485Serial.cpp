@@ -1,4 +1,4 @@
-#include "SolarSerial.hpp"
+#include "RS485Serial.hpp"
 
 #include <iostream>
 #include <vector>
@@ -61,7 +61,7 @@ static int _define_from_baudrate(int baudrate) {
 }
 
 
-SolarSerial::SolarSerial(const std::string& path, int baudrate) {
+RS485Serial::RS485Serial(const std::string& path, int baudrate) {
 	int readBufferSize = 1024;
 	int writeBufferSize = 1024;
 
@@ -105,17 +105,43 @@ SolarSerial::SolarSerial(const std::string& path, int baudrate) {
 	}
 }
 
-SolarSerial::~SolarSerial() noexcept {
+RS485Serial::~RS485Serial() noexcept {
 	if (_fd > -1) ::close(_fd);
 	_fd = -1;
 }
 
-std::array<MPPTData, SolarSerial::MPPTCount> SolarSerial::ReadAll() {
+int RS485Serial::ReadCurrentProducers_mA() {
 	CommandHeader cmd;
-	cmd.command = CommandID::READ_ALL;
+	cmd.identity = currentProducersAddress;
+	cmd.command = (uint8_t)CurrentCommandID::READ_CURRENT;
+	write((uint8_t*)&cmd, sizeof(CommandHeader));
+	auto resp = read();
+	if(resp.size() != sizeof(int)) {
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		return ReadCurrentProducers_mA();
+	}
+	return 8 - (*(int32_t*)resp.data());	// Remaining calibration
+}
+
+int RS485Serial::ReadCurrentConsumers_mA() {
+	CommandHeader cmd;
+	cmd.identity = currentConsumersAddress;
+	cmd.command = (uint8_t)CurrentCommandID::READ_CURRENT;
+	write((uint8_t*)&cmd, sizeof(CommandHeader));
+	auto resp = read();
+	if(resp.size() != sizeof(int)) {
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		return ReadCurrentConsumers_mA();
+	}
+	return -15 - (*(int32_t*)resp.data());	// Remaining calibration
+}
+
+std::array<MPPTData, RS485Serial::MPPTCount> RS485Serial::ReadAllMPPTs() {
+	CommandHeader cmd;
+	cmd.command = (uint8_t)MPPTCommandID::READ_ALL;
 	std::array<MPPTData, MPPTCount> res{};
 	for(int i = 0; i < MPPTCount; ++i) {
-		cmd.identity = i + 1;
+		cmd.identity = i + MPPTStartAddress;
 		write((uint8_t*)&cmd, sizeof(CommandHeader));
 		auto resp = read();
 		if(resp.size() != sizeof(MPPTData)) continue;
@@ -124,10 +150,10 @@ std::array<MPPTData, SolarSerial::MPPTCount> SolarSerial::ReadAll() {
 	return res;
 }
 
-void SolarSerial::SetMaxWiper(int mpptID, uint8_t max) {
+void RS485Serial::SetMaxWiper(int mpptID, uint8_t max) {
 	CommandHeader cmd;
 	cmd.identity = mpptID;
-	cmd.command = CommandID::SET_MAX_WIPER;
+	cmd.command = (uint8_t)MPPTCommandID::SET_MAX_WIPER;
 	uint8_t* s = (uint8_t*)malloc(sizeof(cmd) + 1);
 	memcpy(s, (const void*)&cmd, sizeof(cmd));
 	s[sizeof(cmd)] = max;
@@ -135,14 +161,14 @@ void SolarSerial::SetMaxWiper(int mpptID, uint8_t max) {
 	free(s);
 }
 
-void SolarSerial::SetOutputEnabled(int mpptID, bool en) {
+void RS485Serial::SetOutputEnabled(int mpptID, bool en) {
 	CommandHeader cmd;
 	cmd.identity = mpptID;
-	cmd.command = en ? CommandID::SET_OUTPUT_ENABLED : CommandID::SET_OUTPUT_DISABLED;
+	cmd.command = en ? (uint8_t)MPPTCommandID::SET_OUTPUT_ENABLED : (uint8_t)MPPTCommandID::SET_OUTPUT_DISABLED;
 	write((uint8_t*)&cmd, sizeof(CommandHeader));
 }
 
-std::vector<uint8_t> SolarSerial::read() const {
+std::vector<uint8_t> RS485Serial::read() const {
 	int read_len = 0;
 	uint8_t _readBuffer[1024];
 
@@ -155,7 +181,7 @@ std::vector<uint8_t> SolarSerial::read() const {
 	return ret;
 }
 
-void SolarSerial::write(const uint8_t* cmd_buf, size_t sz) const {
+void RS485Serial::write(const uint8_t* cmd_buf, size_t sz) const {
 	int sent_len = static_cast<int>(::write(_fd, cmd_buf, sz));
 	if (sent_len != sz) {
 		std::cerr << "Write wrong count: " << sent_len << " excpected " << sz << std::endl;

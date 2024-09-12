@@ -6,8 +6,8 @@
 set(SOURCE_FILES
 	MPPTData.h
 
-	SolarSerial.hpp
-	SolarSerial.cpp
+	RS485Serial.hpp
+	RS485Serial.cpp
 
 	solar-mgr.cpp
 )

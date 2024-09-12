@@ -11,14 +11,20 @@
 #define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
 
 
-class SolarSerial {
+class RS485Serial {
 public:
-	static constexpr const int MPPTCount = 4;
+	static constexpr int MPPTCount = 4;
+	static constexpr uint8_t MPPTStartAddress = 0x01;
+	static constexpr uint8_t currentProducersAddress = 0x65;
+	static constexpr uint8_t currentConsumersAddress = 0x66;
 
-	SolarSerial(const std::string& path, int baudrate);
-	~SolarSerial() noexcept;
+	RS485Serial(const std::string& path, int baudrate);
+	~RS485Serial() noexcept;
 
-	std::array<MPPTData, MPPTCount> ReadAll();
+	int ReadCurrentProducers_mA();
+	int ReadCurrentConsumers_mA();
+
+	std::array<MPPTData, MPPTCount> ReadAllMPPTs();
 	void SetMaxWiper(int mpptID, uint8_t max);
 	void SetOutputEnabled(int mpptID, bool en);
 private:
@@ -30,21 +36,24 @@ private:
 	std::vector<uint8_t> read() const;
 	void write(const uint8_t* cmd_buf, size_t sz) const;
 
-	enum class CommandID : uint8_t {
+	enum class MPPTCommandID : uint8_t {
 		READ_ALL = 0x01,
-		SET_MAX_WIPER = 0x02,		// Max wiper is next byte
-		SET_OUTPUT_DISABLED = 0x04,
-		SET_OUTPUT_ENABLED = 0x05
+		SET_MAX_WIPER = 0x02,	// IN Max wiper as a uint8_t
+		SET_OUTPUT_ENABLED = 5,
+                SET_OUTPUT_DISABLED = 6
 	};
+	enum class CurrentCommandID : uint8_t {
+		MAGIC = 0,
+		READ_CURRENT = 1	// OUT Current in mA as a int32_t
+	};
+
 
 	PACK(
 		struct CommandHeader {
 			uint8_t magic1 = 0x4f;
 			uint8_t magic2 = 0xc7;
-			uint8_t magic3 = 0xb2;
-			uint8_t magic4 = 0x9a;
 			uint8_t identity;
-			CommandID command;
+			uint8_t command;
 		};
 	)
 
