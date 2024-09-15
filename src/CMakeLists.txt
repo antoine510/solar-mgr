@@ -4,10 +4,11 @@
 ########
 
 set(SOURCE_FILES
-	MPPTData.h
+	Bus.hpp
+	Bus.cpp
 
-	RS485Serial.hpp
-	RS485Serial.cpp
+	BusModule.hpp
+	CurrentSensor.hpp
 
 	solar-mgr.cpp
 )
