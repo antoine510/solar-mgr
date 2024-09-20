@@ -1,7 +1,9 @@
 #include <iostream>
 #include <thread>
+#include <array>
 #include "Bus.hpp"
 #include "CurrentSensor.hpp"
+#include "MPPT.hpp"
 #include <influxdb.hpp>
 
 static constexpr const char* serial_device = "/dev/mppts";
@@ -23,6 +25,7 @@ int main(int argc, char** argv) {
 		influxdb_cpp::server_info serverInfoSolar("127.0.0.1", 8086, influxdb_org_name, influxdb_token, influxdb_bucket_solar);
 		influxdb_cpp::server_info serverInfoBattery("127.0.0.1", 8086, influxdb_org_name, influxdb_token, influxdb_bucket_battery);
 
+		std::array<MPPT, 4> mppts{0x01, 0x02, 0x03, 0x04};
 		CurrentSensor producers(0x65, 8), consumers(0x66, -15);
 
 		while(true) {
@@ -30,26 +33,21 @@ int main(int argc, char** argv) {
 			const auto nextTP = std::chrono::ceil<LogPeriod>(currentTP);
 			std::this_thread::sleep_until(nextTP);
 
-//			try {
-//				auto data = rs485.ReadAllMPPTs();
-//				influxdb_cpp::builder builder;
-//
-//				int i = 0;
-//				bool hasData = false;
-//				for(const auto& mppt : data) {
-//					++i;
-//					if(mppt.millivolts == 0) continue;
-//					builder.meas("MPPT" + std::to_string(i))
-//						.field("voltage", mppt.millivolts / 1000.f, 2)
-//						.field("current", mppt.milliamps / 1000.f, 2)
-//						.field("watts", mppt.deciwatts / 10.f, 1)
-//						.field("joules", mppt.joules);
-//					hasData = true;
-//				}
-//				if(hasData) reinterpret_cast<influxdb_cpp::detail::ts_caller&>(builder).post_http(serverInfoSolar);
-//			} catch(const std::exception& e) {
-//				std::cerr << e.what() << std::endl;
-//			}
+			influxdb_cpp::builder builder;
+			bool hasData = false;
+
+			for(MPPT& mppt : mppts) {
+				try {
+					auto data = mppt.GetData();
+					builder.meas("MPPT" + std::to_string(mppt.GetModuleID()))
+					.field("vin", data.vin_cv / 100.f, 2)
+					.field("vout", data.vout_dv / 10.f, 1)
+					.field("iout", data.iout_ca / 100.f, 2)
+					.field("power", data.eout_j / 60.f, 1);
+					hasData = true;
+				} catch(const std::exception& e) {}
+			}
+			if(hasData) reinterpret_cast<influxdb_cpp::detail::ts_caller&>(builder).post_http(serverInfoSolar);
 
 			try {
 				influxdb_cpp::builder()

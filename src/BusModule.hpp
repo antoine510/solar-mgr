@@ -7,7 +7,7 @@
 
 class BusModule {
 public:
-	BusModule(uint8_t moduleID) : _rawMessage{Bus::protocol1, Bus::protocol2, moduleID} {}
+	BusModule(uint8_t moduleID) : _rawMessage{Bus::protocol1, Bus::protocol2, moduleID}, _moduleID(moduleID) {}
 
 	bool CheckOnline() {
 		try {
@@ -17,6 +17,8 @@ public:
 		}
 		return true;
 	}
+
+	uint8_t GetModuleID() const { return _moduleID; }
 protected:
 	template<typename Tres, typename... T>
 	Tres sendMessageWithResponse(uint8_t commandID, T... parameters) {
@@ -44,6 +46,7 @@ protected:
 	};
 
 	std::vector<uint8_t> _rawMessage;
+	int _moduleID;
 
 private:
 	template <typename T, typename... Txs>

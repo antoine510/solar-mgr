@@ -8,7 +8,9 @@ set(SOURCE_FILES
 	Bus.cpp
 
 	BusModule.hpp
+	
 	CurrentSensor.hpp
+	MPPT.hpp
 
 	solar-mgr.cpp
 )
