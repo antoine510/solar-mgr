@@ -21,11 +21,11 @@ int main(int argc, char** argv) {
 		auto influxdb_token = getenv("INFLUXDB_TOKEN");
 		if(!influxdb_token) throw std::invalid_argument("Missing INFLUXDB_TOKEN environment variable");
 
-		Bus::SetupBus(serial_device, 9500); // Temporary temperature hack atmega internal oscillator callibration needed
+		Bus::SetupBus(serial_device, 9600); // Temporary temperature hack atmega internal oscillator callibration needed
 		influxdb_cpp::server_info serverInfoSolar("127.0.0.1", 8086, influxdb_org_name, influxdb_token, influxdb_bucket_solar);
 		influxdb_cpp::server_info serverInfoBattery("127.0.0.1", 8086, influxdb_org_name, influxdb_token, influxdb_bucket_battery);
 
-		std::array<MPPT, 4> mppts{0x01, 0x02, 0x03, 0x04};
+		std::array<MPPT, 1> mppts{0x01};
 		CurrentSensor producers(0x65, 8), consumers(0x66, -15);
 
 		while(true) {
@@ -33,31 +33,58 @@ int main(int argc, char** argv) {
 			const auto nextTP = std::chrono::ceil<LogPeriod>(currentTP);
 			std::this_thread::sleep_until(nextTP);
 
-			influxdb_cpp::builder builder;
-			bool hasData = false;
+			{
+				influxdb_cpp::builder builder;
+				bool hasData = false;
 
-			for(MPPT& mppt : mppts) {
-				try {
-					auto data = mppt.GetData();
-					builder.meas("MPPT" + std::to_string(mppt.GetModuleID()))
-					.field("vin", data.vin_cv / 100.f, 2)
-					.field("vout", data.vout_dv / 10.f, 1)
-					.field("iout", data.iout_ca / 100.f, 2)
-					.field("power", data.eout_j / 60.f, 1);
-					hasData = true;
-				} catch(const std::exception& e) {}
+				for(MPPT& mppt : mppts) {
+					try {
+						auto data = mppt.GetData();
+						builder.meas("MPPT" + std::to_string(mppt.GetModuleID()))
+						.field("vin", data.vin_cv / 100.f, 2)
+						.field("vout", data.vout_dv / 10.f, 1)
+						.field("iout", data.iout_ca / 100.f, 2)
+						.field("power", data.eout_j / 60.f, 1);
+						hasData = true;
+					} catch(const std::exception& e) {
+						std::cerr << "MPPT" << (int)mppt.GetModuleID() << " " << e.what() << std::endl;
+					}
+				}
+				if(hasData) reinterpret_cast<influxdb_cpp::detail::ts_caller&>(builder).post_http(serverInfoSolar);
 			}
-			if(hasData) reinterpret_cast<influxdb_cpp::detail::ts_caller&>(builder).post_http(serverInfoSolar);
 
-			try {
-				influxdb_cpp::builder()
-					.meas("Currents")
-					.field("producers", producers.GetCurrent() / 1000.f, 3)
-					.field("consumers", consumers.GetCurrent() / 1000.f, 3)
-					.post_http(serverInfoBattery);
+			{
+				influxdb_cpp::builder builder;
+				int prodCurrent, consCurrent;
+				bool hasProd = true, hasCons = true;
+				try {
+					prodCurrent = producers.GetCurrent();
+				} catch(const std::exception& e) {
+					std::cerr << e.what() << std::endl;
+					hasProd = false;
+				}
 
-			} catch(const std::exception& e) {
-				std::cerr << e.what() << std::endl;
+				try {
+					consCurrent = consumers.GetCurrent();
+				} catch(const std::exception& e) {
+					std::cerr << e.what() << std::endl;
+					hasCons = false;
+				}
+
+				if(hasProd && hasCons) {
+					builder.meas("Currents")
+						.field("producers", prodCurrent / 1000.f, 3)
+						.field("consumers", consCurrent / 1000.f, 3)
+						.post_http(serverInfoBattery);
+				} else if(hasProd) {
+					builder.meas("Currents")
+						.field("producers", prodCurrent / 1000.f, 3)
+						.post_http(serverInfoBattery);
+				} else {
+					builder.meas("Currents")
+						.field("consumers", consCurrent / 1000.f, 3)
+						.post_http(serverInfoBattery);
+				}
 			}
 		}
 	} catch(const std::exception& e) {

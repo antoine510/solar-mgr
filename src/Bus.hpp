@@ -16,10 +16,16 @@ public:
 	static Bus& Instance() {
 		return *inst.get();
 	}
+	void SetBaudrate(int baudrate);
 
 	class ReadTimeoutException : public std::runtime_error {
 	public:
 		ReadTimeoutException() : std::runtime_error("Read timed-out") {}
+	};
+
+	class ReadSizeException : public std::runtime_error {
+	public:
+		ReadSizeException() : std::runtime_error("Wrong read size") {}
 	};
 
 	class WriteException : public std::runtime_error {
@@ -37,7 +43,27 @@ public:
 		Write(command);
 	}
 
+	/**
+	 * Checks the CRC of the response against the value of its last byte
+	 */
+	static bool CheckCRC(const std::vector<uint8_t>& response) {
+		uint8_t crc = 0;
+		std::size_t datalen = response.size() - 1;
+		for (uint8_t b = 0; b < datalen; ++b) {
+			crc ^= response[b];
+			for (uint8_t i = 0; i < 8; ++i) {
+				if (crc & 0x80)
+					crc = (crc << 1) ^ 0x07;	// SMBUS CRC8
+				else
+					crc = crc << 1;
+			}
+		}
+		return crc == response[datalen];
+	}
+
 	static constexpr uint8_t protocol1 = 0x4f, protocol2 = 0xc7;
+
+	static int GetRetryBaudrate(int index) { return _baudrates[index % (sizeof(_baudrates) / sizeof(int))]; }
 
 private:
 	Bus(const std::string& path, int baudrate = 9600);
@@ -55,6 +81,9 @@ private:
 	}
 
 	static inline std::unique_ptr<Bus> inst;
+
+	int _currentBaudrate;
+	static constexpr int _baudrates[] = {9600, 9600, 9500, 9700};
 
 	int _fd = -1;
 	struct timespec _timeout = { 0, 100'000'000 };	// 100 ms
