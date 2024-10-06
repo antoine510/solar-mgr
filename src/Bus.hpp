@@ -83,7 +83,7 @@ private:
 	static inline std::unique_ptr<Bus> inst;
 
 	int _currentBaudrate;
-	static constexpr int _baudrates[] = {9600, 9600, 9500, 9700};
+	static constexpr int _baudrates[] = {9600, 9600, 9500, 9500, 9400};
 
 	int _fd = -1;
 	struct timespec _timeout = { 0, 100'000'000 };	// 100 ms

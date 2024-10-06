@@ -20,7 +20,7 @@ public:
 
 	uint8_t GetModuleID() const { return _header[2]; }
 
-	unsigned retryCount = 4;
+	unsigned retryCount = 5;
 protected:
 	template<typename Tres, typename... T>
 	Tres sendMessageWithResponse(uint8_t commandID, bool crcCheck = false, T... parameters) const {
