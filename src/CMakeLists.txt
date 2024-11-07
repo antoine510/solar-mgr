@@ -7,10 +7,13 @@ set(SOURCE_FILES
 	Bus.hpp
 	Bus.cpp
 
-	BusModule.hpp
+	Modules/BusModule.hpp
 	
-	CurrentSensor.hpp
-	MPPT.hpp
+	Modules/CurrentSensor.hpp
+	Modules/MPPT.hpp
+
+	Network.hpp
+	Network.cpp
 
 	solar-mgr.cpp
 )

@@ -13,7 +13,7 @@ public:
 		uint16_t eout_j;
 	};
 
-	SerialData GetData() const { return sendMessageWithResponse<SerialData>((uint8_t)READ_ALL); }
+	SerialData GetData() const { return sendMessageWithResponse<SerialData>((uint8_t)READ_ALL, false, 0); }
 	void SetManualPP(uint16_t mpp_dv) const { sendMessage((uint8_t)SET_MPP_MANUAL_DV, mpp_dv); }
 	void SetAutomaticPP() const { sendMessage((uint8_t)SET_MPP_AUTO); }
 	void EnableOutput() const { sendMessage((uint8_t)ENABLE_OUTPUT); }

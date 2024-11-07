@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <thread>
 
 #include "Bus.hpp"
 
@@ -20,16 +21,20 @@ public:
 
 	uint8_t GetModuleID() const { return _header[2]; }
 
-	unsigned retryCount = 5;
+	class NoResponseException : public std::runtime_error {
+	public:
+		NoResponseException() : std::runtime_error("No response") {}
+	};
+
 protected:
 	template<typename Tres, typename... T>
-	Tres sendMessageWithResponse(uint8_t commandID, bool crcCheck = false, T... parameters) const {
+	Tres sendMessageWithResponse(uint8_t commandID, bool crcCheck = false, unsigned numRetries = 4, T... parameters) const {
 		auto command = prepareCommand(commandID, parameters...);
 		std::vector<uint8_t> response;
-		unsigned retries = retryCount;
+		unsigned tryCount = 0;
 		do {
 			try {
-				Bus::Instance().SetBaudrate(Bus::GetRetryBaudrate(retryCount - retries));
+				Bus::Instance().SetBaudrate(Bus::GetTryBaudrate(tryCount));
 				response = Bus::Instance().SendCommand(command, sizeof(Tres) + crcCheck);
 				if(crcCheck && !Bus::CheckCRC(response)) {
 					response.clear();
@@ -39,8 +44,8 @@ protected:
 			catch(const Bus::ReadTimeoutException&) { std::this_thread::sleep_for(std::chrono::milliseconds(250)); }
 			catch(const Bus::ReadSizeException&) { std::this_thread::sleep_for(std::chrono::milliseconds(250)); }
 			catch(const std::exception& e) { throw; }
-		} while(!response.size() && retries--);
-		if(!response.size()) throw std::runtime_error("No response");
+		} while(!response.size() && tryCount++ < numRetries);
+		if(!response.size()) throw NoResponseException();
 		return deserialize<Tres>(response);
 	}
 

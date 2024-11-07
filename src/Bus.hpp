@@ -63,7 +63,7 @@ public:
 
 	static constexpr uint8_t protocol1 = 0x4f, protocol2 = 0xc7;
 
-	static int GetRetryBaudrate(int index) { return _baudrates[index % (sizeof(_baudrates) / sizeof(int))]; }
+	static int GetTryBaudrate(int index) { return _baudrates[index % (sizeof(_baudrates) / sizeof(int))]; }
 
 private:
 	Bus(const std::string& path, int baudrate = 9600);
