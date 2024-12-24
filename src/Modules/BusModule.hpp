@@ -8,7 +8,7 @@
 
 class BusModule {
 public:
-	BusModule(uint8_t moduleID) : _header{Bus::protocol1, Bus::protocol2, moduleID} {}
+	BusModule(uint8_t moduleID, bool crcCheck = false) : _header{Bus::protocol1, Bus::protocol2, moduleID}, _crcCheck(crcCheck) {}
 
 	bool CheckOnline() const {
 		try {
@@ -28,15 +28,15 @@ public:
 
 protected:
 	template<typename Tres, typename... T>
-	Tres sendMessageWithResponse(uint8_t commandID, bool crcCheck = false, unsigned numRetries = 4, T... parameters) const {
+	Tres sendMessageWithResponse(uint8_t commandID, unsigned numRetries = 4, T... parameters) const {
 		auto command = prepareCommand(commandID, parameters...);
 		std::vector<uint8_t> response;
 		unsigned tryCount = 0;
 		do {
 			try {
 				Bus::Instance().SetBaudrate(Bus::GetTryBaudrate(tryCount));
-				response = Bus::Instance().SendCommand(command, sizeof(Tres) + crcCheck);
-				if(crcCheck && !Bus::CheckCRC(response)) {
+				response = Bus::Instance().SendCommand(command, sizeof(Tres) + _crcCheck);
+				if(_crcCheck && !Bus::CheckCRC(response)) {
 					response.clear();
 					std::this_thread::sleep_for(std::chrono::milliseconds(250));
 				}
@@ -59,6 +59,7 @@ protected:
 	};
 
 	std::vector<uint8_t> _header;
+	bool _crcCheck;
 
 private:
 	template<typename... T>

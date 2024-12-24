@@ -69,5 +69,8 @@ std::vector<uint8_t> Bus::Read(size_t expectedSize) const {
 }
 
 void Bus::Write(const uint8_t* buf, size_t sz) const {
+	static constexpr uint8_t busReset = 0xff;
+	ioctl(_fd, TCFLSH, 2);
+	::write(_fd, &busReset, 1);
 	if (::write(_fd, buf, sz) != sz) throw WriteException();
 }
