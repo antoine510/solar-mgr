@@ -22,9 +22,9 @@ public:
 private:
 	enum Commands : uint8_t {
 		READ_ALL = 1,
-		SET_MPP_MANUAL_DV = 1,
-		SET_MPP_AUTO = 1,
-		ENABLE_OUTPUT = 1,
-		DISABLE_OUTPUT = 1,
+		SET_MPP_MANUAL_DV,
+		SET_MPP_AUTO,
+		ENABLE_OUTPUT,
+		DISABLE_OUTPUT,
 	};
 };
