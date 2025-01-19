@@ -10,7 +10,7 @@ public:
 		uint16_t vin_cv;
 		uint16_t vout_dv;
 		uint16_t iout_ca;
-		uint16_t eout_j;
+		uint16_t pout_dw;
 	};
 
 	SerialData GetData() const { return sendMessageWithResponse<SerialData>((uint8_t)READ_ALL, 1); }

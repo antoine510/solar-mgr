@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 		influxdb_cpp::server_info serverInfoBattery("127.0.0.1", 8086, influxdb_org_name, influxdb_token, influxdb_bucket_battery);
 
 		std::vector<MPPT> mppts;
-		mppts.emplace_back(1, false);
+		mppts.emplace_back(1, true);
 		mppts.emplace_back(2, true);
 		mppts.emplace_back(3, true);
 		mppts.emplace_back(4, true);

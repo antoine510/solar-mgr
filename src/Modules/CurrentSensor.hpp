@@ -8,7 +8,7 @@ public:
 
 	int GetCurrent() const {
 		int current = _calibration - sendMessageWithResponse<int32_t>((uint8_t)READ_CURRENT_MA);
-		if(current > 100'000) throw std::runtime_error("Invalid current value");
+		if(current < -100'000 || current > 100'000) throw std::runtime_error("Invalid current value");
 		return current;
 	}
 
