@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 		mppts.emplace_back(2, true);
 		mppts.emplace_back(3, true);
 		mppts.emplace_back(4, true);
-		CurrentSensor producers(0x65, 8, false), consumers(0x66, -15, false);
+		CurrentSensor producers(0x65, -3.0534351145f, -365, true), consumers(0x66, -3.1f, -117, true);
 
 		while(true) {
 			const auto currentTP = std::chrono::system_clock::now();
