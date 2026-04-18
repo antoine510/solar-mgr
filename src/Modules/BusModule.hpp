@@ -8,7 +8,7 @@
 
 class BusModule {
 public:
-	BusModule(uint8_t moduleID, bool crcCheck = false) : _header{Bus::protocol1, Bus::protocol2, moduleID}, _crcCheck(crcCheck) {}
+	BusModule(uint8_t moduleID) : _header{Bus::protocol1, Bus::protocol2, moduleID} {}
 
 	bool CheckOnline() const {
 		try {
@@ -35,8 +35,8 @@ protected:
 		do {
 			try {
 				Bus::Instance().SetBaudrate(Bus::GetTryBaudrate(tryCount));
-				response = Bus::Instance().SendCommand(command, sizeof(Tres) + _crcCheck);
-				if(_crcCheck && !Bus::CheckCRC(response)) {
+				response = Bus::Instance().SendCommand(command, sizeof(Tres) + 1);	// Add 1 for CRC byte
+				if(!Bus::CheckCRC(response)) {
 					response.clear();
 					std::this_thread::sleep_for(std::chrono::milliseconds(250));
 				}
@@ -59,15 +59,15 @@ protected:
 	};
 
 	std::vector<uint8_t> _header;
-	bool _crcCheck;
 
 private:
 	template<typename... T>
 	auto prepareCommand(uint8_t commandID, T... parameters) const {
 		std::vector<uint8_t> msg = _header;
-		msg.reserve(4 + sizeof...(parameters));
+		msg.reserve(4 + sizeof...(parameters) + 1);
 		msg.push_back(commandID);
 		serialize(msg, parameters...);
+		if(sizeof...(parameters) > 0) msg.push_back(Bus::GetCRC(msg.data() + 4, msg.size() - 4));
 		return msg;
 	}
 

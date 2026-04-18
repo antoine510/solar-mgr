@@ -1,6 +1,6 @@
 
 ########
-# Solar MPPTs manager
+# Solar MPPTs and battery current sensors manager
 ########
 
 set(SOURCE_FILES
@@ -8,7 +8,7 @@ set(SOURCE_FILES
 	Bus.cpp
 
 	Modules/BusModule.hpp
-	
+
 	Modules/CurrentSensor.hpp
 	Modules/MPPT.hpp
 
@@ -18,5 +18,6 @@ set(SOURCE_FILES
 	solar-mgr.cpp
 )
 add_executable(solar-mgr ${SOURCE_FILES})
+target_link_libraries(solar-mgr PRIVATE nlohmann_json::nlohmann_json)
 
 install(TARGETS solar-mgr RUNTIME)

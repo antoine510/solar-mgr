@@ -4,7 +4,7 @@
 
 class CurrentSensor : public BusModule {
 public:
-	CurrentSensor(uint8_t moduleID, float calFac, int calOffset, bool crcCheck) : BusModule(moduleID, crcCheck), _calFac(calFac), _calOffset(calOffset) {}
+	CurrentSensor(uint8_t moduleID, float calFac, int calOffset) : BusModule(moduleID), _calFac(calFac), _calOffset(calOffset) {}
 
 	int GetCurrent() const {
 		int current = sendMessageWithResponse<int32_t>((uint8_t)READ_CURRENT_MA) * _calFac + _calOffset;

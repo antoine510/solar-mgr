@@ -47,10 +47,13 @@ public:
 	 * Checks the CRC of the response against the value of its last byte
 	 */
 	static bool CheckCRC(const std::vector<uint8_t>& response) {
+		return GetCRC(response.data(), response.size() - 1) == response.back();
+	}
+
+	static uint8_t GetCRC(const uint8_t* message, size_t size) {
 		uint8_t crc = 0;
-		std::size_t datalen = response.size() - 1;
-		for (uint8_t b = 0; b < datalen; ++b) {
-			crc ^= response[b];
+		for (size_t b = 0; b < size; ++b) {
+			crc ^= message[b];
 			for (uint8_t i = 0; i < 8; ++i) {
 				if (crc & 0x80)
 					crc = (crc << 1) ^ 0x07;	// SMBUS CRC8
@@ -58,7 +61,7 @@ public:
 					crc = crc << 1;
 			}
 		}
-		return crc == response[datalen];
+		return crc;
 	}
 
 	static constexpr uint8_t protocol1 = 0x4f, protocol2 = 0xc7;

@@ -3,19 +3,15 @@
 
 void sendMPTTs(const influxdb_cpp::server_info& si, const std::vector<MPPT>& mppts) {
 	for(const MPPT& mppt : mppts) {
-		try {
-			auto data = mppt.GetData();
-			influxdb_cpp::builder builder;
-			builder.meas("MPPT" + std::to_string(mppt.GetModuleID()))
-			.field("vin", data.vin_cv / 100.f, 2)
-			.field("vout", data.vout_dv / 10.f, 1)
-			.field("iout", data.iout_ca / 100.f, 2)
-			.field("power", data.pout_dw / 10.f, 1)
-			.post_http(si);
-        } catch(const BusModule::NoResponseException&) {
-        } catch(const std::exception& e) {
-			std::cerr << "MPPT" << (int)mppt.GetModuleID() << " " << e.what() << std::endl;
-		}
+		if(!mppt.HasValidData()) continue;
+		auto data = mppt.GetData();
+		influxdb_cpp::builder builder;
+		builder.meas("MPPT" + std::to_string(mppt.GetModuleID()))
+		.field("vin", data.vin_cv / 100.f, 2)
+		.field("vout", data.vout_dv / 10.f, 1)
+		.field("iout", data.iout_ca / 100.f, 2)
+		.field("power", data.pout_dw / 10.f, 1)
+		.post_http(si);
 	}
 }
 
