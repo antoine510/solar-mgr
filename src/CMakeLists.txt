@@ -10,6 +10,7 @@ set(SOURCE_FILES
 	Modules/BusModule.hpp
 
 	Modules/CurrentSensor.hpp
+	Modules/ExternalBattery.hpp
 	Modules/MPPT.hpp
 
 	Network.hpp

@@ -37,13 +37,14 @@ int main(int argc, char** argv) {
 			mppts.emplace_back(mpptJson.at("Address"), mpptJson.value("VoutTune", 0));
 		}
 
+		const auto batJson = configJson.at("ExternalBattery");
+		ExternalBattery externalBattery(batJson.at("Address"));
+
 		const auto currentJson = configJson.at("CurrentSensors");
 		const auto producersJson = currentJson.at("Producers");
 		const auto consumersJson = currentJson.at("Consumers");
 		CurrentSensor producers(producersJson.at("Address"), producersJson.value("Scale", 1), producersJson.value("Offset", 0));
 		CurrentSensor consumers(consumersJson.at("Address"), consumersJson.value("Scale", 1), consumersJson.value("Offset", 0));
-
-		//CurrentSensor producers(0x65, -3.0534351145f, -365, true), consumers(0x66, -3.1f, -117, true);
 
 		while(true) {
 			const auto currentTP = std::chrono::system_clock::now();
@@ -51,11 +52,9 @@ int main(int argc, char** argv) {
 			std::this_thread::sleep_until(nextTP);
 
 			for(MPPT& mppt : mppts) mppt.Update();
-//			try {
-//				mppts[1].SetVoutTune(1107u);
-//			} catch(const std::exception&) {}
 
 			sendMPTTs(serverInfoSolar, mppts);
+			sendExternalBattery(serverInfoBattery, externalBattery);
 			sendCurrents(serverInfoBattery, producers, consumers);
 		}
 	} catch(const std::exception& e) {

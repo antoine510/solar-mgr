@@ -15,6 +15,22 @@ void sendMPTTs(const influxdb_cpp::server_info& si, const std::vector<MPPT>& mpp
 	}
 }
 
+void sendExternalBattery(const influxdb_cpp::server_info& si, const ExternalBattery& bat) {
+	auto data = bat.GetData();
+	influxdb_cpp::builder builder;
+	builder.meas("External")
+	.field("v1", data.pack_voltage_mv[0] / 1000.f, 3)
+	.field("v2", data.pack_voltage_mv[1] / 1000.f, 3)
+	.field("v3", data.pack_voltage_mv[2] / 1000.f, 3)
+	.field("v4", data.pack_voltage_mv[3] / 1000.f, 3)
+	.field("v5", data.pack_voltage_mv[4] / 1000.f, 3)
+	.field("v6", data.pack_voltage_mv[5] / 1000.f, 3)
+	.field("temp", data.temp_dC / 10.f, 1)
+	.field("i_cnt", (int)data.current_count)
+	.field("heat", (bool)data.heater_on)
+	.post_http(si);
+}
+
 void sendCurrents(const influxdb_cpp::server_info& si, const CurrentSensor& producers, const CurrentSensor& consumers) {
 	influxdb_cpp::builder builder;
 	int prodCurrent, consCurrent;
