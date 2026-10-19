@@ -5,12 +5,6 @@
 #include "Bus.hpp"
 #include "Network.hpp"
 
-//static constexpr const char* serial_device = "/dev/rs485-bus";
-
-//static constexpr const char* influxdb_org_name = "Microtonome";
-//static constexpr const char* influxdb_bucket_solar = "Solaire";
-//static constexpr const char* influxdb_bucket_battery = "Batterie";
-
 using LogPeriod = std::chrono::duration<int64_t, std::ratio<60>>;
 
 int main(int argc, char** argv) {
@@ -24,17 +18,17 @@ int main(int argc, char** argv) {
 		const std::string influxOrg{influxJson.at("Org")};
 		const std::string influxToken{influxJson.at("Token")};
 
-		//auto influxdb_token = getenv("INFLUXDB_TOKEN");
-		//if(!influxdb_token) throw std::invalid_argument("Missing INFLUXDB_TOKEN environment variable");
-
 		Bus::SetupBus(busJson.at("Device"), busJson.value("Baudrate", 9600u));
 		influxdb_cpp::server_info serverInfoSolar(influxAddress, influxPort, influxOrg, influxToken, influxJson.at("SolarBucket"));
 		influxdb_cpp::server_info serverInfoBattery(influxAddress, influxPort, influxOrg, influxToken, influxJson.at("BatteryBucket"));
 
 		std::vector<MPPT> mppts;
 		const auto mpptsJson = configJson.at("MPPTs");
+		const int mpptCount = mpptsJson.size();
 		for(const auto& mpptJson : mpptsJson) {
-			mppts.emplace_back(mpptJson.at("Address"), mpptJson.value("VoutTune", 0));
+			auto resWeights = mpptJson.value("Connections", std::vector<int>{});
+			if(resWeights.size() != mpptCount) throw std::runtime_error("Invalid weights for MPPT");
+			mppts.emplace_back(mpptJson.at("Address"), mpptJson.value("VoutTune", 0), resWeights);
 		}
 
 		const auto batJson = configJson.at("ExternalBattery");
@@ -51,7 +45,12 @@ int main(int argc, char** argv) {
 			const auto nextTP = std::chrono::ceil<LogPeriod>(currentTP);
 			std::this_thread::sleep_until(nextTP);
 
-			for(MPPT& mppt : mppts) mppt.Update();
+			std::vector<int> currents_ca;
+			for(MPPT& mppt : mppts) {
+				mppt.Update();
+				currents_ca.push_back(mppt.HasValidData() ? mppt.GetData().iout_ca : 0);
+			}
+			for(MPPT& mppt : mppts) mppt.DoCurrentCompensation(currents_ca);
 
 			sendMPTTs(serverInfoSolar, mppts);
 			sendExternalBattery(serverInfoBattery, externalBattery);
