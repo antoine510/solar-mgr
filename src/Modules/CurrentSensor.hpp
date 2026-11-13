@@ -4,19 +4,22 @@
 
 class CurrentSensor : public BusModule {
 public:
-	CurrentSensor(uint8_t moduleID, float calFac, int calOffset) : BusModule(moduleID), _calFac(calFac), _calOffset(calOffset) {}
+	struct SerialData {
+		int16_t current_cA;
+		int16_t temp_dC;
+	};
 
-	int GetCurrent() const {
-		int current = sendMessageWithResponse<int32_t>((uint8_t)READ_CURRENT_MA) * _calFac + _calOffset;
-		if(current < -100'000 || current > 100'000) throw std::runtime_error("Invalid current value");
-		return current;
+	CurrentSensor(uint8_t moduleID, bool reversed) : BusModule(moduleID), _reversed(reversed) {}
+
+	SerialData GetData() const {
+		SerialData data = sendMessageWithResponse<SerialData>((uint8_t)READ_ALL);
+		if(_reversed) data.current_cA = -data.current_cA;
+		return data;
 	}
 
 private:
 	enum Commands : uint8_t {
-		READ_CURRENT_MA = 1,
+		READ_ALL = 1
 	};
-
-	float _calFac;
-	int _calOffset;
+	bool _reversed;
 };

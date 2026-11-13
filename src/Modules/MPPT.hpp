@@ -33,7 +33,7 @@ public:
 
 		int bias = 0;
 		for(int i = 0; i < currents_ca.size(); ++i) bias += currents_ca[i] * _resistanceWeights[i];
-		auto finalTune = _voutTune - std::clamp(bias / 100, 0, 200);
+		auto finalTune = _voutTune - std::clamp(bias / 50, 0, 500);
 
 		try {
 			SetVoutTune(finalTune);

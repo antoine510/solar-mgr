@@ -15,11 +15,10 @@ void sendMPTTs(const influxdb_cpp::server_info& si, const std::vector<MPPT>& mpp
 	}
 }
 
-int externalBatteryCurrent_cA = 0;
 void sendExternalBattery(const influxdb_cpp::server_info& si, const ExternalBattery& bat) {
 	try {
 		auto data = bat.GetData();
-		externalBatteryCurrent_cA = data.current_cA;
+
 		influxdb_cpp::builder builder;
 		builder.meas("External")
 		.field("v1", data.pack_voltage_mv[0] / 1000.f, 3)
@@ -33,24 +32,23 @@ void sendExternalBattery(const influxdb_cpp::server_info& si, const ExternalBatt
 		.field("heat", (bool)data.heater_on)
 		.post_http(si);
 	} catch(const std::exception& e) {
-		externalBatteryCurrent_cA = 0;
 		std::cerr << e.what() << std::endl;
 	}
 }
 
 void sendCurrents(const influxdb_cpp::server_info& si, const CurrentSensor& producers, const CurrentSensor& consumers) {
 	influxdb_cpp::builder builder;
-	int prodCurrent_mA, consCurrent_mA;
+	CurrentSensor::SerialData prodData, consData;
 	bool hasProd = false, hasCons = false;
 	try {
-		prodCurrent_mA = producers.GetCurrent();
+		prodData = producers.GetData();
 		hasProd = true;
 	} catch(const std::exception& e) {
 		std::cerr << e.what() << std::endl;
 	}
 
 	try {
-		consCurrent_mA = consumers.GetCurrent() - externalBatteryCurrent_cA * 10;
+		consData = consumers.GetData();
 		hasCons = true;
 	} catch(const std::exception& e) {
 		std::cerr << e.what() << std::endl;
@@ -59,18 +57,22 @@ void sendCurrents(const influxdb_cpp::server_info& si, const CurrentSensor& prod
 	if(hasProd) {
 		if(hasCons) {
 			builder.meas("Currents")
-				.field("producers", prodCurrent_mA / 1000.f, 3)
-				.field("consumers", consCurrent_mA / 1000.f, 3)
+				.field("producers", prodData.current_cA / 100.f, 2)
+				.field("prodTemp", prodData.temp_dC / 10.f, 1)
+				.field("consumers", consData.current_cA / 100.f, 2)
+				.field("consTemp", consData.temp_dC / 10.f, 1)
 				.post_http(si);
 		} else {
 			builder.meas("Currents")
-				.field("producers", prodCurrent_mA / 1000.f, 3)
+				.field("producers", prodData.current_cA / 100.f, 2)
+				.field("prodTemp", prodData.temp_dC / 10.f, 1)
 				.post_http(si);
 		}
 	} else {
 		if(hasCons) {
 			builder.meas("Currents")
-				.field("consumers", consCurrent_mA / 1000.f, 3)
+				.field("consumers", consData.current_cA / 100.f, 2)
+				.field("consTemp", consData.temp_dC / 10.f, 1)
 				.post_http(si);
 		}
 	}

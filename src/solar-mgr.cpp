@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
 		const auto currentJson = configJson.at("CurrentSensors");
 		const auto producersJson = currentJson.at("Producers");
 		const auto consumersJson = currentJson.at("Consumers");
-		CurrentSensor producers(producersJson.at("Address"), producersJson.value("Scale", 1), producersJson.value("Offset", 0));
-		CurrentSensor consumers(consumersJson.at("Address"), consumersJson.value("Scale", 1), consumersJson.value("Offset", 0));
+		CurrentSensor producers(producersJson.at("Address"), producersJson.at("Reversed"));
+		CurrentSensor consumers(consumersJson.at("Address"), consumersJson.at("Reversed"));
 
 		while(true) {
 			const auto currentTP = std::chrono::system_clock::now();
